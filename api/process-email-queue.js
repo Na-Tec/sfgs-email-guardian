@@ -106,12 +106,17 @@ export default async function handler(req, res) {
     });
     res.status(200).json({ success: true });
   } catch (err) {
-    await supabase.from('email_queue').update({ status: 'failed', error_message: err.message }).eq('id', pending.id);
-    await supabase.from('cron_log').insert({
-      status: 'error',
-      message: err.message,
-      email_id: pending.id
-    });
+    // Defensive: log error but don't block response if logging fails
+    try {
+      await supabase.from('email_queue').update({ status: 'failed', error_message: err.message }).eq('id', pending.id);
+      await supabase.from('cron_log').insert({
+        status: 'error',
+        message: err.message,
+        email_id: pending.id
+      });
+    } catch (logErr) {
+      // If logging fails, just continue
+    }
     res.status(500).json({ error: err.message });
   }
 }
