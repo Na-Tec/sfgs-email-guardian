@@ -9,6 +9,12 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  // Allow GET or POST for cron compatibility
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
   // Get today's month and day
   const today = new Date();
   const month = today.getMonth() + 1; // JS months are 0-based
