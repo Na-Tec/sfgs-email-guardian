@@ -9,12 +9,13 @@ import { useToast } from "@/hooks/use-toast";
 import { GraduationCap, Loader2, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+// Fixed admin account - only one user in the system
 const ADMIN_EMAIL = "admin@sfgs.local";
 
 export default function Auth() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -36,7 +37,7 @@ export default function Auth() {
     if (!password.trim()) {
       toast({
         title: "Error",
-        description: "Please enter the admin password.",
+        description: "Please enter the password.",
         variant: "destructive",
       });
       return;
@@ -44,26 +45,18 @@ export default function Auth() {
 
     setIsLoading(true);
     try {
-      // First, verify password against database
-      const { data: settings, error: settingsError } = await supabase
+      // Get the admin password from database
+      const { data: settings } = await supabase
         .from("system_settings")
         .select("admin_password")
-        .single();
+        .maybeSingle();
 
-      if (settingsError || !settings) {
-        // If no settings exist, create default and check against default password
-        if (password !== "sfgsadmin") {
-          toast({
-            title: "Invalid Password",
-            description: "The password you entered is incorrect.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-      } else if (settings.admin_password !== password) {
+      const correctPassword = settings?.admin_password || "sfgsadmin";
+
+      // Check if password matches
+      if (password !== correctPassword) {
         toast({
-          title: "Invalid Password",
+          title: "Wrong Password",
           description: "The password you entered is incorrect.",
           variant: "destructive",
         });
@@ -71,52 +64,48 @@ export default function Auth() {
         return;
       }
 
-      // Password is correct, now sign in or create the Supabase auth user
-      const { error: signInError } = await signIn(ADMIN_EMAIL, password);
-      
+      // Password correct - sign in to the fixed admin account
+      // Try to sign in first
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: ADMIN_EMAIL,
+        password: correctPassword,
+      });
+
       if (signInError) {
-        // User might not exist yet, try to create it
+        // Account doesn't exist, create it
         if (signInError.message.includes("Invalid login credentials")) {
-          const { error: signUpError } = await signUp(ADMIN_EMAIL, password);
-          
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: ADMIN_EMAIL,
+            password: correctPassword,
+            options: { emailRedirectTo: `${window.location.origin}/` },
+          });
+
           if (signUpError) {
             toast({
               title: "Error",
-              description: "Failed to initialize admin account. Please try again.",
+              description: "Failed to initialize. Please try again.",
               variant: "destructive",
             });
             setIsLoading(false);
             return;
           }
-          
-          // Wait a moment for the user to be created, then sign in
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Now sign in with the newly created account
-          const { data: signInData, error: retrySignInError } = await supabase.auth.signInWithPassword({
+
+          // Add admin role for the new user
+          if (signUpData.user) {
+            await supabase
+              .from("user_roles")
+              .upsert({ user_id: signUpData.user.id, role: "admin" }, { onConflict: "user_id,role" });
+          }
+
+          // Sign in with the new account
+          await supabase.auth.signInWithPassword({
             email: ADMIN_EMAIL,
-            password: password,
+            password: correctPassword,
           });
-          
-          if (retrySignInError || !signInData.user) {
-            toast({
-              title: "Error",
-              description: "Account created. Please try logging in again.",
-              variant: "destructive",
-            });
-            setIsLoading(false);
-            return;
-          }
-          
-          // Add admin role for the newly created user
-          await supabase
-            .from("user_roles")
-            .upsert({ user_id: signInData.user.id, role: "admin" }, { onConflict: "user_id,role" });
-            
         } else {
           toast({
             title: "Error",
-            description: signInError.message,
+            description: "Login failed. Please try again.",
             variant: "destructive",
           });
           setIsLoading(false);
@@ -124,11 +113,15 @@ export default function Auth() {
         }
       }
 
+      toast({
+        title: "Welcome!",
+        description: "Login successful.",
+      });
       navigate("/dashboard");
     } catch (err) {
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
@@ -151,13 +144,13 @@ export default function Auth() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Admin Password</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter admin password"
+                  placeholder="Enter password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10"
