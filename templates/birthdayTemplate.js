@@ -3,26 +3,85 @@
 
 export default function birthdayTemplate({ studentName }) {
   return `
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%); border-radius: 16px; box-shadow: 0 4px 24px rgba(80, 112, 255, 0.08); padding: 32px 24px; max-width: 480px; margin: 32px auto; border: 1px solid #e0e7ff;">
-      <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="32" cy="32" r="32" fill="#6366F1"/>
-          <path d="M32 16V32" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-          <circle cx="32" cy="40" r="8" fill="#fff"/>
-          <circle cx="32" cy="40" r="5" fill="#6366F1"/>
-        </svg>
-      </div>
-      <h2 style="color: #4338ca; font-size: 1.7rem; font-weight: 700; text-align: center; margin-bottom: 12px; letter-spacing: 0.5px;">Happy Birthday from SFGS!</h2>
-      <p style="color: #334155; font-size: 1.1rem; text-align: center; margin-bottom: 18px;">Dear Parent/Guardian,</p>
-      <div style="background: #f1f5f9; border-radius: 10px; padding: 18px 16px; margin-bottom: 18px; border-left: 4px solid #6366F1;">
-        <p style="color: #6366F1; font-size: 1.15rem; font-weight: 500; margin: 0;">
-          We are delighted to celebrate your child's special day!<br>
-          <span style="color: #0ea5e9; font-weight: 700;">Wishing ${
-            studentName || "your child"
-          } a wonderful birthday and a fantastic year ahead.</span>
-        </p>
-      </div>
-      <p style="color: #64748b; font-size: 1rem; text-align: center; margin-bottom: 0;">Best wishes,<br><span style="color: #6366F1; font-weight: 600;">SFGS Team</span></p>
+    <div style="background: #f8f6f3; font-family: Georgia, 'Times New Roman', serif; padding: 0; margin: 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f8f6f3;">
+        <tr>
+          <td align="center" style="padding: 40px 20px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 560px; width: 100%; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+              <!-- School Logo -->
+              <tr>
+                <td style="padding: 24px 0 0 0; text-align: center; background: #fff;">
+                  <img src='https://raw.githubusercontent.com/your-org/your-repo/main/public/sfgs-logo.jpg' alt="SFGS Logo" width="80" height="80" style="border-radius: 50%; box-shadow: 0 2px 8px rgba(74,15,63,0.10); margin-bottom: 8px;" />
+                </td>
+              </tr>
+              <tr>
+                <td style="background: linear-gradient(135deg, #4a0f3f 0%, #764ba2 100%); padding: 40px 40px 35px; text-align: center; position: relative;">
+                  <div style="position: absolute; top: 15px; left: 25px; font-size: 28px;">🎈</div>
+                  <div style="position: absolute; top: 20px; right: 30px; font-size: 24px;">🎈</div>
+                  <div style="position: absolute; bottom: 15px; left: 45px; font-size: 20px;">🎈</div>
+                  <div style="position: absolute; bottom: 20px; right: 50px; font-size: 22px;">🎈</div>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: normal; letter-spacing: 1px;">
+                    Happy Birthday
+                  </h1>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 40px 40px 30px; text-align: center;">
+                  <p style="margin: 0 0 8px 0; color: #888888; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">
+                    Celebrating
+                  </p>
+                  <p style="margin: 0; color: #4a0f3f; font-size: 28px; font-weight: bold;">
+                    ${studentName || "your child"}
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 40px 30px; text-align: center;">
+                  <div style="font-size: 56px; line-height: 1;">🎂</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 0 40px 40px; text-align: center;">
+                  <p style="margin: 0; color: #555555; font-size: 16px; line-height: 1.7;">
+                    On behalf of everyone at <strong style='color:#4a0f3f;'>SURE FOUNDATION GROUP OF SCHOOL (SFGS)</strong>, we wish your child a wonderful birthday filled with joy and happiness.
+                  </p>
+                  <p style="margin: 20px 0 0 0; color: #555555; font-size: 16px; line-height: 1.7;">
+                    May this new year bring growth, learning, and many cherished moments.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 0 40px 20px; text-align: center;">
+                  <span style="font-size: 24px; margin: 0 8px; color: #4a0f3f;">🎈</span>
+                  <span style="font-size: 20px; margin: 0 8px; color: #4a0f3f;">🎈</span>
+                  <span style="font-size: 26px; margin: 0 8px; color: #4a0f3f;">🎈</span>
+                  <span style="font-size: 22px; margin: 0 8px; color: #4a0f3f;">🎈</span>
+                  <span style="font-size: 24px; margin: 0 8px; color: #4a0f3f;">🎈</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 0 40px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                    <tr>
+                      <td style="border-top: 1px solid #eeeeee;"></td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 30px 40px 40px; text-align: center;">
+                  <p style="margin: 0; color: #888888; font-size: 14px;">
+                    Warm regards,
+                  </p>
+                  <p style="margin: 8px 0 0 0; color: #4a0f3f; font-size: 16px; font-weight: bold;">
+                    SURE FOUNDATION GROUP OF SCHOOL (SFGS)
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     </div>
   `;
 }
