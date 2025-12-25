@@ -56,7 +56,16 @@ const AppInner = () => {
             )
           }
         />
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route
+          index
+          element={
+            isLoading ? null : user ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/auth" replace />
+            )
+          }
+        />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/upload" element={<Upload />} />
         <Route path="/files" element={<Files />} />
