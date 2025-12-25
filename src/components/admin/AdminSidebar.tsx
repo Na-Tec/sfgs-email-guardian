@@ -51,8 +51,12 @@ export function AdminSidebar() {
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-            <GraduationCap className="h-5 w-5 text-sidebar-primary-foreground" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg">
+            <img
+              src="/sfgs-logo.jpg"
+              alt="SFGS Logo"
+              className="h-7 w-7 rounded"
+            />
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-sidebar-foreground">
@@ -76,7 +80,7 @@ export function AdminSidebar() {
                     <NavLink
                       to={item.url}
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      activeClassName="bg-white text-[rgb(74,15,63)] font-bold"
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -100,7 +104,7 @@ export function AdminSidebar() {
                     <NavLink
                       to={item.url}
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      activeClassName="bg-white text-[rgb(74,15,63)] font-bold"
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -124,7 +128,7 @@ export function AdminSidebar() {
                     <NavLink
                       to={item.url}
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      activeClassName="bg-white text-[rgb(74,15,63)] font-bold"
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>

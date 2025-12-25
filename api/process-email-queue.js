@@ -20,17 +20,12 @@ export default async function handler(req, res) {
     .select('id, daily_email_limit, email_batch_size, email_interval_minutes, updated_at')
     .order('updated_at', { ascending: false });
 
-  console.log('📧 All settings rows:', settingsArray, 'Error:', settingsError);
-  
   const settings = settingsArray?.[0] || null;
-  console.log('📧 Using settings:', settings);
 
   // Get daily email limit, batch size, and interval from settings
   const dailyLimit = settings?.daily_email_limit || 100;
   const maxBatchSize = settings?.email_batch_size || 10;
   const intervalMinutes = settings?.email_interval_minutes || 5;
-
-  console.log('📊 Daily Limit:', dailyLimit, 'Batch Size:', maxBatchSize, 'Interval:', intervalMinutes, 'minutes');
 
   // Check if enough time has passed since last email was sent
   const { data: lastSentEmail } = await supabase
@@ -46,8 +41,6 @@ export default async function handler(req, res) {
     const now = new Date();
     const minutesSinceLastSend = (now.getTime() - lastSentTime.getTime()) / (1000 * 60);
     
-    console.log('⏰ Last email sent:', lastSentTime.toISOString(), `(${minutesSinceLastSend.toFixed(1)} minutes ago)`);
-    
     if (minutesSinceLastSend < intervalMinutes) {
       const waitMinutes = (intervalMinutes - minutesSinceLastSend).toFixed(1);
       await supabase.from('cron_log').insert({
@@ -62,8 +55,6 @@ export default async function handler(req, res) {
       });
       return;
     }
-  } else {
-    console.log('⏰ No previous emails sent today');
   }
 
   // Count how many emails have been sent today
@@ -74,8 +65,6 @@ export default async function handler(req, res) {
     .select('id', { count: 'exact', head: true })
     .eq('status', 'sent')
     .gte('sent_at', today.toISOString());
-
-  console.log('✅ Already sent today:', sentToday);
 
   if (sentToday >= dailyLimit) {
     await supabase.from('cron_log').insert({
@@ -90,8 +79,6 @@ export default async function handler(req, res) {
   const remainingToday = dailyLimit - sentToday;
   const batchSize = Math.min(maxBatchSize, remainingToday);
 
-  console.log('📦 Batch size for this run:', batchSize, '(remaining today:', remainingToday, ')');
-
   // Get batch of pending emails to send
   const { data: pendingEmails } = await supabase
     .from('email_queue')
@@ -100,8 +87,6 @@ export default async function handler(req, res) {
     .order('prioritized_at', { ascending: false, nullsLast: true })
     .order('queued_at', { ascending: true })
     .limit(batchSize);
-
-  console.log('📬 Pending emails found:', pendingEmails?.length || 0);
 
   if (!pendingEmails || pendingEmails.length === 0) {
     await supabase.from('cron_log').insert({
@@ -137,11 +122,6 @@ export default async function handler(req, res) {
         message = 'No message content provided.';
       }
 
-      // Defensive: log pending if subject or message is blank
-      if (!subject.trim() || !message.trim()) {
-        console.warn('Email subject or message is blank. Pending object:', JSON.stringify(pending));
-      }
-
       // Defensive: parse attachments safely
       let attachmentsArr = [];
       if (pending.attachments) {
@@ -149,12 +129,8 @@ export default async function handler(req, res) {
           const parsed = JSON.parse(pending.attachments);
           if (Array.isArray(parsed)) {
             attachmentsArr = parsed;
-          } else {
-            console.warn('Attachments is not an array:', pending.attachments);
           }
-        } catch (e) {
-          console.warn('Failed to parse attachments JSON:', pending.attachments, e);
-        }
+        } catch (e) {}
       }
     let brevoAttachments = [];
     if (attachmentsArr.length > 0) {
@@ -195,9 +171,7 @@ export default async function handler(req, res) {
             if (response.ok) {
               buffer = Buffer.from(await response.arrayBuffer());
             }
-          } catch (e) {
-            console.warn('Failed to fetch attachment from URL:', url, e);
-          }
+          } catch (e) {}
         }
 
         if (buffer) {
@@ -254,8 +228,6 @@ export default async function handler(req, res) {
       htmlContent += `<br><br>Download attachments:<br>${links.join('<br>')}`;
     }
 
-      console.log('📨 Sending email to:', pending.recipient_email);
-
       // Send email via Brevo
       await sendBrevoEmail({
         toEmail: pending.recipient_email,
@@ -293,11 +265,9 @@ export default async function handler(req, res) {
       }
 
       sentCount++;
-      console.log('✅ Email sent successfully. Total sent in this batch:', sentCount);
     } catch (err) {
       failedCount++;
       errors.push({ email: pending.recipient_email, error: err.message });
-      console.error('❌ Failed to send email:', err.message);
       
       // Log error
       try {
@@ -306,9 +276,7 @@ export default async function handler(req, res) {
           type: 'email',
           message: `Email failed to ${pending.recipient_email}: ${err.message}`,
         });
-      } catch (logErr) {
-        console.error('Failed to log error:', logErr);
-      }
+      } catch (logErr) {}
     }
   }
 
@@ -317,8 +285,6 @@ export default async function handler(req, res) {
     status: failedCount === 0 ? 'success' : 'partial_success',
     message: `Batch complete: ${sentCount} sent, ${failedCount} failed (limit: ${dailyLimit}, batch: ${maxBatchSize})`
   });
-
-  console.log('🏁 Batch complete:', { sent: sentCount, failed: failedCount });
 
   res.status(200).json({ 
     success: true, 
