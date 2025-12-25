@@ -27,7 +27,7 @@ import Birthday from "./pages/Birthday";
 const queryClient = new QueryClient();
 
 const AppInner = () => {
-  const { isLoading } = useAuth();
+  const { isLoading, user } = useAuth();
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -46,8 +46,17 @@ const AppInner = () => {
       <Toaster />
       <Sonner />
       <Routes>
+        <Route
+          path="/auth"
+          element={
+            isLoading ? null : user ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Auth />
+            )
+          }
+        />
         <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="/auth" element={<Auth />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/upload" element={<Upload />} />
         <Route path="/files" element={<Files />} />
