@@ -136,6 +136,14 @@ export default function Auth() {
         title: "Welcome!",
         description: "Login successful.",
       });
+
+      // After successful login, trigger background sync (throttled)
+      fetch("/api/sync-students.js", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminEmail: ADMIN_EMAIL }),
+      });
+
       // Removed navigate("/dashboard") here to avoid navigation loop
     } catch (err) {
       toast({

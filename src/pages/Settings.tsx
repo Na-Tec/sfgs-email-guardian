@@ -12,7 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Save, Loader2 } from "lucide-react";
+import {
+  Settings as SettingsIcon,
+  Save,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 
 export default function Settings() {
   const [settings, setSettings] = useState({
@@ -25,6 +30,7 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [testLoading, setTestLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -88,6 +94,27 @@ export default function Settings() {
       toast({ title: "Failed to send test email", variant: "destructive" });
     }
     setTestLoading(false);
+  };
+
+  // Google Sheets Sync
+  const handleSyncStudents = async () => {
+    setSyncLoading(true);
+    try {
+      const res = await fetch("/api/sync-students.js", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: `Imported ${data.count} students from Google Sheets!` });
+      } else {
+        toast({ title: data.error || "Sync failed", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Sync failed", variant: "destructive" });
+    }
+    setSyncLoading(false);
   };
 
   if (isLoading)
@@ -204,6 +231,23 @@ export default function Settings() {
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Sends a test email to the address above.
+            </p>
+          </div>
+          {/* Google Sheets Sync Section */}
+          <div className="pt-8 mt-8 border-t">
+            <Label>Sync Students from Google Sheets</Label>
+            <div className="flex gap-2 mt-2">
+              <Button onClick={handleSyncStudents} disabled={syncLoading}>
+                {syncLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Sync
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Imports or updates all students from the configured Google Sheet.
             </p>
           </div>
         </CardContent>
