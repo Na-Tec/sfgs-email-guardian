@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import birthdayTemplate from '../templates/birthdayTemplate.js';
 import { sendBrevoEmail } from '../utils/sendBrevoEmail.js';
+import { htmlToPdfBuffer } from '../utils/htmlToPdf.js';
 
 // Use service role key for server-side access
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -136,129 +137,137 @@ export default async function handler(req, res) {
 
   for (const pending of pendingEmails) {
     try {
-      const now = new Date(); // Define now for each email
-      
-      // Compose subject and message for birthday emails
+      const now = new Date();
       let subject = pending.subject;
       let message = pending.message;
-      if (pending.email_type === 'birthday') {
-        subject = `MESSAGE FROM SURE FOUNDATION GROUP OF SCHOOL`;
-        message = birthdayTemplate({ studentName: pending.students?.student_name || 'your child' });
-      }
-
-      // Fallbacks if subject or message are still missing
-      if (!subject || typeof subject !== 'string' || !subject.trim()) {
-        subject = '[SFGS Notification]';
-      }
-      if (!message || typeof message !== 'string' || !message.trim()) {
-        message = 'No message content provided.';
-      }
-
-      // Defensive: parse attachments safely
       let attachmentsArr = [];
-      if (pending.attachments) {
-        try {
-          const parsed = JSON.parse(pending.attachments);
-          if (Array.isArray(parsed)) {
-            attachmentsArr = parsed;
-          }
-        } catch (e) {}
-      }
-    let brevoAttachments = [];
-    if (attachmentsArr.length > 0) {
-      for (let url of attachmentsArr) {
-        let displayName = null;
-        let buffer = null;
+      let brevoAttachments = [];
 
-        // If not a URL, treat as Supabase storage key and get file buffer
-        if (!url.startsWith('http')) {
-          const bucket = 'pdfs';
-          const fileKey = url;
+      if (pending.email_type === 'birthday') {
+        subject = `A message from SURE FOUNDATION GROUP OF SCHOOL`;
+        message = `Find the attached PDF.`;
+        // Generate PDF from template
+        const html = birthdayTemplate({ studentName: pending.students?.student_name || 'your child' });
+        const pdfBuffer = await htmlToPdfBuffer(html);
 
-          // Lookup display name from uploaded_files
-          const { data: fileMeta } = await supabase
-            .from('uploaded_files')
-            .select('original_file_name')
-            .eq('storage_path', url)
-            .maybeSingle();
-          if (fileMeta?.original_file_name) {
-            displayName = fileMeta.original_file_name;
-          }
+        // Upload PDF to Supabase Storage
+        const studentName = (pending.students?.student_name || 'student').replace(/\s+/g, '_');
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const filePath = `attachments/SFGS_Greeting_${studentName}_${todayStr}.pdf`;
+        const { error: uploadError } = await supabase.storage.from('pdfs').upload(filePath, pdfBuffer, {
+          contentType: 'application/pdf',
+          upsert: true
+        });
+        if (uploadError) throw new Error('Failed to upload birthday PDF: ' + uploadError.message);
 
-          // Download file from Supabase Storage
-          const { data: fileData, error: fileError } = await supabase.storage.from(bucket).download(fileKey);
-          if (fileData && !fileError) {
-            buffer = Buffer.from(await fileData.arrayBuffer());
-          }
-
-          // Also get public URL for fallback links
-          const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(fileKey);
-          if (publicUrlData?.publicUrl) {
-            url = publicUrlData.publicUrl;
-          }
-        } else {
-          // If it's a URL, fetch it
+        // Save the storage path as the attachment for this email
+        attachmentsArr = [filePath];
+      } else {
+        // Defensive: parse attachments safely
+        if (pending.attachments) {
           try {
-            const response = await fetch(url);
-            if (response.ok) {
-              buffer = Buffer.from(await response.arrayBuffer());
+            const parsed = JSON.parse(pending.attachments);
+            if (Array.isArray(parsed)) {
+              attachmentsArr = parsed;
             }
           } catch (e) {}
         }
+      }
 
-        if (buffer) {
-          // Convert buffer to base64 for Brevo
-          const base64Content = buffer.toString('base64');
-          let filename = displayName || url.split('/').pop()?.split('?')[0] || 'attachment.pdf';
+      if (attachmentsArr.length > 0) {
+        for (let url of attachmentsArr) {
+          let displayName = null;
+          let buffer = null;
 
-          // Ensure filename has an extension
-          if (!/\.[a-zA-Z0-9]+$/.test(filename)) {
-            const extMatch = url.match(/\.[a-zA-Z0-9]+$/);
-            if (extMatch) filename += extMatch[0];
-            else filename += '.pdf'; // default to .pdf
+          // If not a URL, treat as Supabase storage key and get file buffer
+          if (!url.startsWith('http')) {
+            const bucket = 'pdfs';
+            const fileKey = url;
+
+            // Lookup display name from uploaded_files
+            const { data: fileMeta } = await supabase
+              .from('uploaded_files')
+              .select('original_file_name')
+              .eq('storage_path', url)
+              .maybeSingle();
+            if (fileMeta?.original_file_name) {
+              displayName = fileMeta.original_file_name;
+            }
+
+            // Download file from Supabase Storage
+            const { data: fileData, error: fileError } = await supabase.storage.from(bucket).download(fileKey);
+            if (fileData && !fileError) {
+              buffer = Buffer.from(await fileData.arrayBuffer());
+            }
+
+            // Also get public URL for fallback links
+            const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(fileKey);
+            if (publicUrlData?.publicUrl) {
+              url = publicUrlData.publicUrl;
+            }
+          } else {
+            // If it's a URL, fetch it
+            try {
+              const response = await fetch(url);
+              if (response.ok) {
+                buffer = Buffer.from(await response.arrayBuffer());
+              }
+            } catch (e) {}
           }
 
-          brevoAttachments.push({
-            content: base64Content,
-            name: filename
-          });
+          if (buffer) {
+            // Convert buffer to base64 for Brevo
+            const base64Content = buffer.toString('base64');
+            let filename = displayName || url.split('/').pop()?.split('?')[0] || 'attachment.pdf';
+
+            // Ensure filename has an extension
+            if (!/\.[a-zA-Z0-9]+$/.test(filename)) {
+              const extMatch = url.match(/\.[a-zA-Z0-9]+$/);
+              if (extMatch) filename += extMatch[0];
+              else filename += '.pdf'; // default to .pdf
+            }
+
+            brevoAttachments.push({
+              content: base64Content,
+              name: filename
+            });
+          }
         }
       }
-    }
 
-    // Prepare HTML content
-    let htmlContent = message;
+      // Prepare HTML content
+      let htmlContent = message;
 
-    // If there were supposed to be attachments but none could be attached, add download links
-    if (attachmentsArr.length > 0 && brevoAttachments.length === 0) {
-      const links = await Promise.all(attachmentsArr.map(async (url) => {
-        let displayName = null;
-        let link = null;
-        if (!url.startsWith('http')) {
-          const bucket = 'pdfs';
-          const fileKey = url;
-          const { data: fileMeta } = await supabase
-            .from('uploaded_files')
-            .select('original_file_name')
-            .eq('storage_path', url)
-            .maybeSingle();
-          if (fileMeta?.original_file_name) {
-            displayName = fileMeta.original_file_name;
+      // If there were supposed to be attachments but none could be attached, add download links
+      if (attachmentsArr.length > 0 && brevoAttachments.length === 0) {
+        const links = await Promise.all(attachmentsArr.map(async (url) => {
+          let displayName = null;
+          let link = null;
+          if (!url.startsWith('http')) {
+            const bucket = 'pdfs';
+            const fileKey = url;
+            const { data: fileMeta } = await supabase
+              .from('uploaded_files')
+              .select('original_file_name')
+              .eq('storage_path', url)
+              .maybeSingle();
+            if (fileMeta?.original_file_name) {
+              displayName = fileMeta.original_file_name;
+            }
+            const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(fileKey);
+            if (publicUrlData?.publicUrl) {
+              link = `<a href="${publicUrlData.publicUrl}">${displayName || fileKey}</a>`;
+            }
+          } else {
+            link = `<a href="${url}">${displayName || url.split('/').pop()?.split('?')[0] || 'Download attachment'}</a>`;
           }
-          const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(fileKey);
-          if (publicUrlData?.publicUrl) {
-            link = `<a href="${publicUrlData.publicUrl}">${displayName || fileKey}</a>`;
+          if (!link) {
+            link = `${displayName || url.split('/').pop()?.split('?')[0] || 'Attachment'} (Could not be delivered. Please contact admin.)`;
           }
-        } else {
-          link = `<a href="${url}">${displayName || url.split('/').pop()?.split('?')[0] || 'Download attachment'}</a>`;
-        }
-        if (!link) {
-          link = `${displayName || url.split('/').pop()?.split('?')[0] || 'Attachment'} (Could not be delivered. Please contact admin.)`;
-        }
-        return link;
-      }));
-      htmlContent += `<br><br>Download attachments:<br>${links.join('<br>')}`;
-    }
+          return link;
+        }));
+        htmlContent += `<br><br>Download attachments:<br>${links.join('<br>')}`;
+      }
 
       // Send email via Brevo
       await sendBrevoEmail({
